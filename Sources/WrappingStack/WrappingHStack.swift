@@ -12,7 +12,8 @@ public struct WrappingHStack<Data: RandomAccessCollection, ID: Hashable, Content
     public var alignment: Alignment
     public var horizontalSpacing: CGFloat
     public var verticalSpacing: CGFloat
-    
+    public var lineLimit: Int
+
     @State private var sizes: [ID: CGSize] = [:]
     @State private var calculatesSizesKeys: Set<ID> = []
     
@@ -39,12 +40,14 @@ public struct WrappingHStack<Data: RandomAccessCollection, ID: Hashable, Content
     ///   - alignment: horizontal and vertical alignment. Vertical alignment is applied to every row
     ///   - horizontalSpacing: horizontal spacing between elements
     ///   - verticalSpacing: vertical spacing between the lines
+    ///   - lineLimit: maximum number of lines. 0 means no limit. Default: 0
     ///   - create: a method that creates an array of elements
     public init(
         id: KeyPath<Data.Element, ID>,
         alignment: Alignment = .center,
         horizontalSpacing: CGFloat = 0,
         verticalSpacing: CGFloat = 0,
+        lineLimit: Int = 0,
         @ViewBuilder content create: () -> ForEach<Data, ID, Content>
     ) {
         let forEach = create()
@@ -55,13 +58,18 @@ public struct WrappingHStack<Data: RandomAccessCollection, ID: Hashable, Content
         self.alignment = alignment
         self.horizontalSpacing = horizontalSpacing
         self.verticalSpacing = verticalSpacing
+        self.lineLimit = lineLimit
     }
     
     private func splitIntoLines(maxWidth: CGFloat) -> [Range<Data.Index>] {
         let lines = Lines(elements: data, spacing: horizontalSpacing) { element in
             sizes[element[keyPath: id]]?.width ?? 0
         }
-        return lines.split(lengthLimit: maxWidth)
+        if lineLimit <= 0 {
+            return lines.split(lengthLimit: maxWidth)
+        } else {
+            return Array(lines.split(lengthLimit: maxWidth).prefix(lineLimit))
+        }
     }
     
     public var body: some View {
